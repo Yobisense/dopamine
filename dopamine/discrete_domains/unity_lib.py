@@ -235,12 +235,12 @@ class OTCPreprocessing(object):
     
     self.epi_steps = 0
 
-    if self.last_floor == 0:
-        self.last_floor = 5
+    #if self.last_floor == 0:
+    self.last_floor = 0
     #elif self.last_floor == 5:
     #    self.last_floor = 10
-    else:
-        self.last_floor = 0
+    #else:
+    #    self.last_floor = 0
     self.environment.floor(self.last_floor) 
 
     self.last_info = {'time_remaining': 99999, 'current_floor':-1, 'total_keys':0}
@@ -327,7 +327,8 @@ class OTCPreprocessing(object):
       observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
       #observation = cv2.Laplacian(observation,cv2.CV_8U)
 
-      #observation[5:11] = 0
+      observation[5:11] = 0
+      observation[5:11,0:20] = 150
       #cv2.imshow('footage', observation)
       #cv2.waitKey(1)
       
