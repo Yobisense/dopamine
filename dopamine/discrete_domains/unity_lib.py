@@ -35,8 +35,12 @@ import tensorflow as tf
 
 import gin.tf
 import cv2
+import logging
+import random
+from matplotlib import pyplot as plt
 
 slim = tf.contrib.slim
+logging.disable(logging.WARNING)
 
 
 NATURE_DQN_OBSERVATION_SHAPE = (84, 84)  # Size of downscaled Atari 2600 frame.
@@ -51,7 +55,8 @@ def create_otc_environment(environment_path=None):
     An Obstacle Tower environment with some standard preprocessing.
   """
   assert environment_path is not None
-  env = ObstacleTowerEnv(environment_path, 0, retro = True)
+  worker_id = random.randint(0,99)
+  env = ObstacleTowerEnv(environment_path, worker_id=worker_id, retro = True, realtime_mode=False)
   env = OTCPreprocessing(env)
   return env
 
@@ -194,6 +199,9 @@ class OTCPreprocessing(object):
 
     self.game_over = False
     self.lives = 0  # Will need to be set by reset().
+    self.last_floor = None
+    self.has_key = False
+    self.printed = False
 
   @property
   def observation_space(self):
@@ -211,6 +219,11 @@ class OTCPreprocessing(object):
   def metadata(self):
     return self.environment.metadata
 
+  def is_grading(self):
+    return self.environment.is_grading()
+
+  def done_grading(self):
+    return self.environment.done_grading()
   def reset(self):
     """Resets the environment. Converts the observation to greyscale, 
     if it is not. 
@@ -219,9 +232,32 @@ class OTCPreprocessing(object):
       observation: numpy array, the initial observation emitted by the
         environment.
     """
+    
+    self.epi_steps = 0
+
+    if self.last_floor == 0:
+        self.last_floor = 5
+    #elif self.last_floor == 5:
+    #    self.last_floor = 10
+    else:
+        self.last_floor = 0
+    self.environment.floor(self.last_floor) 
+
+    self.last_info = {'time_remaining': 99999, 'current_floor':-1, 'total_keys':0}
+    self.environment.seed(101)#random seed
     observation = self.environment.reset()
+
+    
+
+
     if(len(observation.shape)> 2):
       observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
+      #observation = cv2.Laplacian(observation,cv2.CV_8U)
+
+
+
+      #cv2.imshow('footage',observation)
+      #cv2.waitKey(1)
 
     return observation
 
@@ -264,11 +300,37 @@ class OTCPreprocessing(object):
         episode is over.
       info: Gym API's info data structure.
     """
+    self.epi_steps = self.epi_steps +1
 
     observation, reward, game_over, info = self.environment.step(action)
+
+
+    if self.epi_steps > 25 and info['current_floor'] == self.last_info['current_floor'] and info['time_remaining'] > self.last_info['time_remaining']: #new time > old time, supply reward (to promote collecting orbs)           
+        reward = reward + 0.002
+
+    if game_over and self.last_info['time_remaining'] > 50: #punishment for death. We use 50 as a threshold, just to be sure that this is premature death
+        reward = - 1
+        
+    #if reward == 1:
+        #reward = reward + (600-self.epi_steps)/600
+
+    if info['total_keys'] > self.last_info['total_keys']:
+        reward = 0.5
+    elif info['total_keys'] < self.last_info['total_keys']:
+        reward = 0.3
+
     self.game_over = game_over
+    self.last_info = info
+
+
     if(len(observation.shape)> 2):
       observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
+      #observation = cv2.Laplacian(observation,cv2.CV_8U)
+
+      #observation[5:11] = 0
+      #cv2.imshow('footage', observation)
+      #cv2.waitKey(1)
+      
     return observation, reward, game_over, info
   def close(self):
       self.environment.close()
