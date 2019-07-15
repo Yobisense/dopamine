@@ -55,7 +55,7 @@ def create_otc_environment(environment_path=None):
     An Obstacle Tower environment with some standard preprocessing.
   """
   assert environment_path is not None
-  worker_id = random.randint(0,99)
+  worker_id = 0#random.randint(0,99)
   env = ObstacleTowerEnv(environment_path, worker_id=worker_id, retro = True, realtime_mode=False)
   env = OTCPreprocessing(env)
   return env
@@ -236,7 +236,7 @@ class OTCPreprocessing(object):
     self.epi_steps = 0
 
     #if self.last_floor == 0:
-    self.last_floor = 0
+    self.last_floor = 4
     #elif self.last_floor == 5:
     #    self.last_floor = 10
     #else:
