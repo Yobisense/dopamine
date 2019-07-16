@@ -515,9 +515,10 @@ class DQNAgent(object):
       bool, True if unbundling was successful.
     """
     try:
+      pass
       # self._replay.load() will throw a NotFoundError if it does not find all
       # the necessary files, in which case we abort the process & return False.
-      self._replay.load(checkpoint_dir, iteration_number)
+      #self._replay.load(checkpoint_dir, iteration_number)
     except tf.errors.NotFoundError:
       return False
     for key in self.__dict__:
